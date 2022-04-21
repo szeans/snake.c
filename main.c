@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 #define WIDTH 680
 #define HEIGHT 400
@@ -85,7 +85,7 @@ void terminate(int exit_code) {
     }
 
     if (game.window) {
-        SDL_DestoryWindow(game.window);
+        SDL_DestroyWindow(game.window);
     }
 
     SDL_Quit();
