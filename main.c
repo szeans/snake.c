@@ -17,6 +17,7 @@ void draw_walls(void);
 void draw_snake(void);
 void spawn_snake(void);
 void move_snake(void);
+void change_direction(SDL_KeyCode new_direction);
 
 struct {
     SDL_Renderer *renderer;
@@ -114,6 +115,14 @@ void handle_input() {
         // game state should be "not running" when close or esc key is pressed
         if ((e.type == SDL_QUIT) || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)) {
             game.running = 0;
+        }
+
+        // change direction
+        if (e.type == SDL_KEYDOWN && (e.key.keysym.sym == SDLK_UP
+                                    || e.key.keysym.sym == SDLK_DOWN
+                                    || e.key.keysym.sym == SDLK_LEFT
+                                    || e.key.keysym.sym == SDLK_RIGHT)) {
+            change_direction(e.key.keysym.sym);
         }
     }
 }
@@ -219,4 +228,36 @@ void move_snake() {
     // TODO:
     // if snake ate food, dont remove tail and increase score
     // check if snake is dead
+}
+
+void change_direction(SDL_KeyCode new_direction) {
+    // figure out what direction
+    int going_up = game.dy == -CELL_HEIGHT;
+    int going_down = game.dy == CELL_HEIGHT;
+    int going_left = game.dx == -CELL_WIDTH;
+    int going_right = game.dx == CELL_WIDTH;
+
+    // change to up
+    if (new_direction == SDLK_UP && !going_down) {
+        game.dx = 0;
+        game.dy = -CELL_HEIGHT;
+    }
+
+    // change to down
+    if (new_direction == SDLK_DOWN && !going_up) {
+        game.dx = 0;
+        game.dy = CELL_HEIGHT;
+    }
+
+    // change to left
+    if (new_direction == SDLK_LEFT && !going_right) {
+        game.dy = 0;
+        game.dx = -CELL_WIDTH;
+    }
+
+    // change to right
+    if (new_direction == SDLK_RIGHT && !going_left) {
+        game.dy = 0;
+        game.dx = CELL_WIDTH;
+    }
 }
