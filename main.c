@@ -18,6 +18,7 @@ void draw_snake(void);
 void spawn_snake(void);
 void move_snake(void);
 void change_direction(SDL_KeyCode new_direction);
+void handle_collisions(void);
 
 struct {
     SDL_Renderer *renderer;
@@ -26,6 +27,7 @@ struct {
     SDL_Rect snake[CELL_COUNT]; // array for snake
     int dx;
     int dy;
+    int game_over;
 } typedef Game;
 
 // global structure to store game state
@@ -34,7 +36,8 @@ Game game = {
     .running = 1,
     .snake = {0},
     .dx = CELL_WIDTH,
-    .dy = 0
+    .dy = 0,
+    .game_over = 0
 };
 
 int main() {
@@ -157,8 +160,12 @@ void draw_walls() {
 }
 
 void draw_snake(void) {
-    // draw snake head
-    SDL_SetRenderDrawColor(game.renderer, 0, 128, 0, 255);
+    if (game.game_over) {
+      SDL_SetRenderDrawColor(game.renderer, 255, 0, 0, 255);
+    } else {
+      // draw green cell
+     SDL_SetRenderDrawColor(game.renderer, 0, 128, 0, 255);
+    }
     SDL_RenderFillRect(game.renderer, &game.snake[0]);
 
     // draw snake
@@ -168,10 +175,13 @@ void draw_snake(void) {
             break;
         }
 
-        // TODO: make snake red when dead
-
         // draw green cell
-        SDL_SetRenderDrawColor(game.renderer, 0, 128, 0 , 255);
+        if (game.game_over) {
+            SDL_SetRenderDrawColor(game.renderer, 255, 0, 0, 255);
+        } else {
+            // draw green cell
+            SDL_SetRenderDrawColor(game.renderer, 0, 128, 0, 255);
+        }
         SDL_RenderFillRect(game.renderer, &game.snake[i]);
 
         // black border around each snake cell
@@ -203,6 +213,10 @@ void spawn_snake() {
 }
 
 void move_snake() {
+    if (game.game_over) {
+        return;
+    }
+
     // shift elements right to make room for new head
     for (int i = sizeof(game.snake) / sizeof(game.snake[0]) - 1; i >= 0; i--) {
         game.snake[i] = game.snake[i-1];
@@ -227,7 +241,8 @@ void move_snake() {
 
     // TODO:
     // if snake ate food, dont remove tail and increase score
-    // check if snake is dead
+
+    handle_collisions();
 }
 
 void change_direction(SDL_KeyCode new_direction) {
@@ -260,4 +275,39 @@ void change_direction(SDL_KeyCode new_direction) {
         game.dy = 0;
         game.dx = CELL_WIDTH;
     }
+}
+
+void handle_collisions() {
+  // hit snake?
+  for (int i = 1; i < sizeof(game.snake)/sizeof(game.snake[0]); i++) {
+    // exit loop when at the end of the active elements of the snake body
+    if (game.snake[i].w == 0) {
+      break;
+    }
+    // check the head has not run into active body elements
+    if (game.snake[0].x == game.snake[i].x && game.snake[0].y == game.snake[i].y) {
+      game.game_over = 1;
+      return;
+    }
+  }
+  // hit left wall?
+  if (game.snake[0].x < WALL_THICKNESS + CELL_WIDTH) {
+    game.game_over = 1;
+    return;
+  }
+  // hit right wall?
+  if (game.snake[0].x > WIDTH - WALL_THICKNESS - CELL_HEIGHT * 2) {
+    game.game_over = 1;
+    return;
+  }
+  // hit top wall?
+  if (game.snake[0].y < WALL_THICKNESS + CELL_HEIGHT) {
+    game.game_over = 1;
+    return;
+  }
+  // hit bottoom wall?
+  if (game.snake[0].y > HEIGHT - WALL_THICKNESS - CELL_HEIGHT * 2) {
+    game.game_over = 1;
+    return;
+  }
 }
