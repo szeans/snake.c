@@ -1,6 +1,6 @@
 # snake_in_c
-Making the game snake in C using SDL2 with a retro look.
+Recreated the game Snake in C using SDL2.
 
-Run "make" in terminal and "./snake"
+Run command "./snake" in the directory to play the game.
 
-Controls are arrow keys and "ESC" to close the game
+Arrow keys to move and "ESC" to close.
