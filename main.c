@@ -19,6 +19,9 @@ void spawn_snake(void);
 void move_snake(void);
 void change_direction(SDL_KeyCode new_direction);
 void handle_collisions(void);
+void spawn_food(void);
+void draw_food(void);
+void display_score();
 
 struct {
     SDL_Renderer *renderer;
@@ -28,6 +31,8 @@ struct {
     int dx;
     int dy;
     int game_over;
+    SDL_Rect food;
+    int score;
 } typedef Game;
 
 // global structure to store game state
@@ -37,7 +42,11 @@ Game game = {
     .snake = {0},
     .dx = CELL_WIDTH,
     .dy = 0,
-    .game_over = 0
+    .game_over = 0,
+    .food = {
+        .w = CELL_WIDTH, .h = CELL_HEIGHT
+    },
+    .score = 0
 };
 
 int main() {
@@ -45,6 +54,7 @@ int main() {
     initialize();
 
     spawn_snake();
+    spawn_food();
 
     while (game.running) {
         // clear game screen to black before drawing
@@ -53,9 +63,8 @@ int main() {
 
         handle_input();
 
-        // TODO: add update and draw functions
         move_snake();
-        // draw_food();
+        draw_food();
         draw_snake();
         draw_walls();
 
@@ -228,19 +237,23 @@ void move_snake() {
     game.snake[0].w = CELL_WIDTH;
     game.snake[0].h = CELL_HEIGHT;
 
-    //remove tail by finding last inactive element then zero one before it
-    for (int i = 5; i < sizeof(game.snake) / sizeof(game.snake[0]); i++) {
-        if (game.snake[i].w == 0) {
-            game.snake[i-1].x = 0;
-            game.snake[i-1].y = 0;
-            game.snake[i-1].w = 0;
-            game.snake[i-1].h = 0;
-            break;
+    // if the head touces the snake, make it grow by not removing the tail
+    // and spawn the food in a new random location.
+    if (game.food.x == game.snake[0].x && game.food.y == game.snake[0].y) {
+        spawn_food();
+        game.score++;
+    } else {
+        //remove tail by finding last inactive element then zero one before it
+        for (int i = 5; i < sizeof(game.snake) / sizeof(game.snake[0]); i++) {
+            if (game.snake[i].w == 0) {
+                game.snake[i-1].x = 0;
+                game.snake[i-1].y = 0;
+                game.snake[i-1].w = 0;
+                game.snake[i-1].h = 0;
+                break;
+            }
         }
     }
-
-    // TODO:
-    // if snake ate food, dont remove tail and increase score
 
     handle_collisions();
 }
@@ -254,24 +267,36 @@ void change_direction(SDL_KeyCode new_direction) {
 
     // change to up
     if (new_direction == SDLK_UP && !going_down) {
+        if ((game.snake[0].y - CELL_HEIGHT) == (game.snake[1].y)) {
+            return;
+        }
         game.dx = 0;
         game.dy = -CELL_HEIGHT;
     }
 
     // change to down
     if (new_direction == SDLK_DOWN && !going_up) {
+        if ((game.snake[0].y + CELL_HEIGHT) == (game.snake[1].y)) {
+            return;
+        }
         game.dx = 0;
         game.dy = CELL_HEIGHT;
     }
 
     // change to left
     if (new_direction == SDLK_LEFT && !going_right) {
+        if ((game.snake[0].x - CELL_WIDTH) == (game.snake[1].x)) {
+            return;
+        }
         game.dy = 0;
         game.dx = -CELL_WIDTH;
     }
 
     // change to right
     if (new_direction == SDLK_RIGHT && !going_left) {
+        if ((game.snake[0].x + CELL_WIDTH) == (game.snake[1].x)) {
+            return;
+        }
         game.dy = 0;
         game.dx = CELL_WIDTH;
     }
@@ -291,23 +316,66 @@ void handle_collisions() {
     }
   }
   // hit left wall?
-  if (game.snake[0].x < WALL_THICKNESS + CELL_WIDTH) {
+  if (game.snake[0].x < WALL_THICKNESS) {
     game.game_over = 1;
     return;
   }
   // hit right wall?
-  if (game.snake[0].x > WIDTH - WALL_THICKNESS - CELL_HEIGHT * 2) {
+  if (game.snake[0].x > WIDTH - WALL_THICKNESS - CELL_HEIGHT) {
     game.game_over = 1;
     return;
   }
   // hit top wall?
-  if (game.snake[0].y < WALL_THICKNESS + CELL_HEIGHT) {
+  if (game.snake[0].y < WALL_THICKNESS) {
     game.game_over = 1;
     return;
   }
   // hit bottoom wall?
-  if (game.snake[0].y > HEIGHT - WALL_THICKNESS - CELL_HEIGHT * 2) {
+  if (game.snake[0].y > HEIGHT - WALL_THICKNESS - CELL_HEIGHT) {
     game.game_over = 1;
     return;
   }
+}
+
+void spawn_food() {
+  // generate a random number in multiples of 10 along the x axis that fits between the left and right walls 
+  game.food.x = (rand() % (((WIDTH - CELL_WIDTH - WALL_THICKNESS)/CELL_WIDTH)+1)*CELL_WIDTH);
+  // generate a random number in multiples of 10 along the y axis that fits between the top and bottom walls 
+  game.food.y = (rand() % (((HEIGHT - CELL_HEIGHT - WALL_THICKNESS)/CELL_HEIGHT)+1)*CELL_HEIGHT);
+
+  // if the random number generated is less than the thickness of the left wall,
+  // make the food spawn next to the left wall
+  if (game.food.x < WALL_THICKNESS) {
+    game.food.x = WALL_THICKNESS;
+  }
+
+  // if the random number generated is less than the thickness of the top wall,
+  // make the food spawn next to the top wall
+  if (game.food.y < WALL_THICKNESS) {
+    game.food.y = WALL_THICKNESS;
+  }
+
+  // only spawn the food if it does not touch the snake
+  for (int i = 0; i < sizeof(game.snake)/sizeof(game.snake[0]); i++) {
+    // exit loop when at the end of the active elements of the snake body
+    if (game.snake[i].w == 0) {
+      break;
+    }
+    if (game.snake[i].x == game.food.x && game.snake[i].y == game.food.y) {
+      spawn_food();
+      break;
+    }
+  }
+}
+
+void draw_food() {
+  // make the food red
+  SDL_SetRenderDrawColor(game.renderer, 255, 0, 0, 255);
+  SDL_RenderFillRect(game.renderer, &game.food);
+}
+
+void display_score() {
+    char buffer[20];
+    snprintf(buffer, 20, "Score: %d", game.score);
+    SDL_SetWindowTitle(game.window, buffer);
 }
